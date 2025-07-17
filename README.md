@@ -160,6 +160,7 @@ If it’s 110°F outside in Arizona, with strong sunlight and a gentle wind, asp
 
 - **Result:** **DANGER** alert
 
+---
 
 
 [^1]: Hudak, P. (2022). [Hazardous Ground Temperatures When Walking Dogs](https://journals.uco.es/index.php/pet/article/view/13733), *Pet Behaviour Science*, 12, 31–42.  
