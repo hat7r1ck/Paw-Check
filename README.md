@@ -14,6 +14,7 @@
   </tr>
 </table>
 
+---
 
 ## Overview
 Paw-Check is a Scriptable widget for iOS designed for dog owners who care deeply about their pet’s wellbeing. The widget helps you decide if it is safe for your dog’s paws to walk outside by using real-time, location-aware weather data. Inspired by concern for my dogs in extreme climates, like the intense Arizona summer, Paw-Check provides surface temperature estimates for both asphalt and concrete that dynamically adjust to conditions anywhere in the world.
@@ -34,12 +35,37 @@ Paw-Check was created out of genuine love for dogs and respect for all who prior
 * **Smart Caching:** Updates automatically every 10 minutes with the option to refresh instantly.
 * **Weather Details:** Tells you the current sky condition according to international standards.
 
+---
+### Setup
+1. Install **Scriptable** from the App Store
+
+2. **Add the widget script**
+   Either drop `Paw-Check.js` file into the iCloud Scriptable folder, or open Scriptable, tap **+**, paste the code, and name it `Paw-Check`.
+
+3. **Add a Scriptable widget**
+
+   * Long press the home screen, tap **+**, search for *Scriptable*, then add a medium-sized widget to your home screen.
+   * Long‑press the new widget and choose **Edit Widget**.
+
+4. **Configure widget options**
+
+   * **Script**: select `Paw-Check`
+   * **When Interacting**: change default ("Open App") to **Run Script**
+   * (Optional) **Parameter**: set to `force_refresh` to enable tap-to-refresh behavior.
+
+5. **Initial run**
+   Open Scriptable and run `Paw-Check` manually to grant permissions and initialize cache.
+
+---
+
 ### How It Works
 1. The widget collects local weather data: air temperature, sunlight intensity, and wind speed.[^1]
 2. It runs a physics-informed model to estimate how much hotter (or colder) the ground is compared to the air.[^1] [^2]
 3. Calculations only apply warming if it is daylight and there is enough sunlight.
 4. It compares the higher of the two surface temperatures to recommended safety thresholds and displays a clear warning or reassurance.[^3] [^5]
 5. No temperatures or thresholds are hard-coded for a specific city or season. All values can adapt instantly based on your real local conditions.
+
+---
 
 #### 1. Weather Input Data
 Pulled from [Open-Meteo](https://open-meteo.com/ "https://open-meteo.com/")’s GPS-based API:
@@ -48,6 +74,8 @@ Pulled from [Open-Meteo](https://open-meteo.com/ "https://open-meteo.com/")’s 
 - `windSpeedMPS` – 10 m wind speed (m/s)
 - `day` – daylight indicator (`true/false`)
 - `description` – human-readable WMO code
+
+---
 
 #### 2. Surface Temperature Model
 **Normalize Input Factors** [^1] [^2]
@@ -92,6 +120,7 @@ Only calculated if:
 * day is true
 * solarRadW_m2 > 50
 
+---
 
 #### 3. Risk Evaluation
 Compares asphalt and concrete values against veterinary safety limits:
@@ -104,20 +133,12 @@ Compares asphalt and concrete values against veterinary safety limits:
 | SAFE                 | 36–119                    | Green `#4CD964` | Happy Paws – Safe!              |
 
 
-Here's a table that matches your code exactly:
-
-Status	Temperature Range (°F)	Color	App Says (Label Shown)
-DANGER	≥ 130	Red #FF3B30	Ouch! Way Too Hot!
-WARNING / CAUTION	120 – 129	Orange #FF9500	Hot Surface, Caution
-COLD DANGER	≤ 35	Blue #5AC8FA	Too Cold – Paw Risk
-SAFE	36 – 119	Green #4CD964	Happy Paws – Safe!
-
-
 > [!NOTE]
 > The higher of the two surface temps determines risk status.
 > Veterinary experts advise paw burns can occur in under a minute when surfaces reach 120°F or higher, with risk almost instant at 130°F.[^3]
 > Cold can also cause harm below 35°F.[^5]
 
+---
 
 ### Example Calculation
 If it’s 110°F outside in Arizona, with strong sunlight and a gentle wind, asphalt might reach over 160°F and concrete over 130°F. In such cases, Paw-Check will clearly warn that walking is not safe for your dog.
