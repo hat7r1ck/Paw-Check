@@ -1,180 +1,75 @@
 # Paw-Check Widget
-<table>
-  <tr>
-    <td align="center">
-      <img src="https://github.com/user-attachments/assets/adea2b36-00d9-4ab4-ae9e-2524424168d2" alt="Paw-Check Screenshot" width="260">
-      <br>
-      <sub><b>Paw-Check Screenshot</b></sub>
-    </td>
-    <td align="center">
-      <img src="https://github.com/user-attachments/assets/840dcd61-2f30-4fc9-be75-d3e8d3f2d210" alt="My Dogs" width="260">
-      <br>
-      <sub><b>My Pups</b></sub>
-    </td>
-  </tr>
-</table>
 
-***
+Paw-Check is a Scriptable widget for iPhone that estimates **asphalt** and **concrete** surface temperature from your current weather, solar radiation, and wind speed.
 
-## Overview
-Paw-Check is a Scriptable widget for iOS designed for dog owners who care deeply about their pet’s wellbeing. The widget helps you decide if it is safe for your dog’s paws to walk outside by using real-time, location-aware weather data. Inspired by concern for my dogs in extreme climates, like the intense Arizona summer, Paw-Check provides surface temperature estimates for both asphalt and concrete that dynamically adjust to conditions anywhere in the world.
+It is meant to be a conservative paw-safety indicator for hot pavement conditions, especially in high-heat areas.
 
-### Purpose
-Paw-Check was created out of genuine love for dogs and respect for all who prioritize their pets’ safety. The logic is as reliable and consistent as possible, regardless of location or season, because every dog deserves safe walks and every paw deserves comfort.
+## How it works
 
-> [!WARNING]
-> Always use the 7-second hand test on the pavement to double-check safety.
-> 
-> *If the pavement feels too hot or cold for your hand, it’s not safe for paws.*
+The widget uses a simplified surface energy balance model instead of fixed rise-above-air constants.
 
-### Key Features
-* **Science-Based Calculation:** Estimates pavement temperature using air temperature, solar radiation, and wind speed.
-* **Truly Local:** Uses your device’s GPS to fetch weather specific to your location, wherever you are.
-* **Separate Warnings:** Shows temperature estimates for both asphalt and concrete surfaces.
-* **Clear Safety Alerts:** Color-coded labels indicate danger, caution, cold, or safe based on veterinary guidelines. 
-* **Smart Caching:** Updates automatically every 10 minutes with the option to refresh instantly.
-* **Weather Details:** Tells you the current sky condition according to international standards.
+$$
+T_{surface} = T_{air} + \frac{\alpha_s \cdot G}{h_c + h_r}
+$$
 
-***
-### Setup
-1. Install **Scriptable** from the App Store
+Inputs:
+- Air temperature from Open-Meteo.
+- Shortwave solar radiation in W/m² from Open-Meteo.
+- 10 m wind speed in **m/s** from Open-Meteo.
 
-2. **Add the widget script**
-   Either drop `Paw-Check.js` file into the iCloud Scriptable folder, or open Scriptable, tap **+**, paste the code, and name it `Paw-Check`.
+Material properties used:
 
-3. **Add a Scriptable widget**
+| Surface | Solar absorptance | Emissivity |
+|---|---:|---:|
+| Asphalt | 0.92 | 0.92 |
+| Concrete | 0.62 | 0.90 |
 
-   * Long press the home screen, tap **+**, search for *Scriptable*, then add a medium-sized widget to your home screen.
-   * Long‑press the new widget and choose **Edit Widget**.
+## Safety thresholds
 
-4. **Configure widget options**
+| Status | Surface temperature |
+|---|---:|
+| Safe | 36°F to 119°F |
+| Caution | 120°F to 129°F |
+| Danger | 130°F and above |
+| Cold risk | 35°F and below |
 
-   * **Script**: select `Paw-Check`
-   * **When Interacting**: change default ("Open App") to **Run Script**
-   * (Optional) **Parameter**: set to `force_refresh` to enable tap-to-refresh behavior.
+The hot warning threshold of 120°F aligns with published burn-risk guidance used in paw-safety discussions.
 
-5. **Initial run**
-   Open Scriptable and run `Paw-Check` manually to grant permissions and initialize cache.
+## Data source
 
-***
+Weather data comes from [Open-Meteo](https://open-meteo.com/en/docs).
 
-### How It Works
-1. The widget collects local weather data: air temperature, sunlight intensity, and wind speed.
-2. It runs a physics-informed model to estimate how much hotter (or colder) the ground is compared to the air. 
-3. Calculations only apply warming if it is daylight and there is enough sunlight.
-4. It compares the higher of the two surface temperatures to recommended safety thresholds and displays a clear warning or reassurance. 
-5. No temperatures or thresholds are hard-coded for a specific city or season. All values can adapt instantly based on your real local conditions.
+Requested fields:
+- `current_weather=true`
+- `hourly=apparent_temperature,shortwave_radiation,windspeed_10m`
+- `temperature_unit=fahrenheit`
+- `wind_speed_unit=ms`
+- `timezone=auto`
 
-***
+## Setup
 
-#### 1. Weather Input Data
-Pulled from [Open-Meteo](https://open-meteo.com/ "https://open-meteo.com/")’s GPS-based API:
-- `air` – current air temperature (°F)
-- `solarRadW_m2` – solar radiation (W/m²)
-- `windSpeedMPS` – 10 m wind speed (m/s)
-- `day` – daylight indicator (`true/false`)
-- `description` – human-readable WMO code
+1. Install **Scriptable** on iPhone.
+2. Create a new script.
+3. Paste in `paw-check.js`.
+4. Save the script as `Paw-Check`.
+5. Add a **medium Scriptable widget** to the Home Screen.
+6. Edit the widget and set:
+   - **Script**: `Paw-Check`
+   - **When Interacting**: `Run Script`
+   - **Parameter**: `force_refresh`
 
-***
+## Scriptable parameter
 
-#### 2. Surface Temperature Model
-**Normalize Input Factors**  
+Scriptable still exposes the widget text parameter through `args.widgetParameter`, so the refresh pattern remains valid.
+
+The script checks:
+
 ```javascript
-const normalizedSolar = Math.min(solarRadW_m2 / 1000, 1);  // Full sun = 1000 W/m
-const normalizedWind  = Math.min(windSpeedMPS / 15, 1);    // 15 m/s = strong wind
-const windReductionFactor = 1 - (normalizedWind * 0.5);    // Wind reduces rise by up to 50%
+const forceRefreshOnTap = args.widgetParameter === "force_refresh";
 ```
 
-**Compute Surface Rise**
-```javascript
-const maxAsphaltRise = 70;
-const maxConcreteRise = 30;
+## Notes
 
-let asphaltRise = maxAsphaltRise * normalizedSolar * windReductionFactor;
-let concreteRise = maxConcreteRise * normalizedSolar * windReductionFactor;
-```
-* Asphalt heats 40–70°F above air in full sun
-* Concrete typically rises 10–30°F
-
-**Enforce Material Relationship**
-```javascript
-if (concreteRise >= asphaltRise) {
-  concreteRise = asphaltRise * 0.7;
-}
-```
-* Concrete capped at 70% of asphalt
-
-**Clamp Final Temperature**
-```javascript
-asphaltTemp = Math.round(airTempF + asphaltRise);
-concreteTemp = Math.round(airTempF + concreteRise);
-
-asphaltTemp = Math.min(asphaltTemp, 180);
-concreteTemp = Math.min(concreteTemp, 180);
-```
-* Surface temps capped at 180°F
-* Below-air temps prevented during sunny daytime
-
-**Final Conditions**
-Only calculated if:
-* day is true
-* solarRadW_m2 > 50
-
-***
-
-#### 3. Risk Evaluation
-Compares asphalt and concrete values against veterinary safety limits:
-
-| **Status**           | **Temperature Range (°F)** | **Color**      | **App Says (Label Shown)**      |
-|----------------------|:-------------------------:|:--------------:|:-------------------------------|
-| DANGER               | ≥ 130                     | Red `#FF3B30`  | Ouch! Way Too Hot!              |
-| WARNING / CAUTION    | 120–129                   | Orange `#FF9500` | Hot Surface, Caution           |
-| COLD DANGER          | ≤ 35                      | Blue `#5AC8FA` | Too Cold – Paw Risk             |
-| SAFE                 | 36–119                    | Green `#4CD964` | Happy Paws – Safe!              |
-
-
-> [!NOTE]
-> The higher of the two surface temps determines risk status.
-> Veterinary experts advise paw burns can occur in under a minute when surfaces reach 120°F or higher, with risk almost instant at 130°F.
-> Cold can also cause harm below 35°F.
-
-***
-
-### Example Calculation
-If it’s 110°F outside in Arizona, with strong sunlight and a gentle wind, asphalt might reach over 160°F and concrete over 130°F. In such cases, Paw-Check will clearly warn that walking is not safe for your dog.
-- **Air temp**: 110°F
-- **Solar**: 900 W/m²
-- **Wind**: 3 m/s
-
-    ```javascript
-    normalizedSolar = 0.9
-    normalizedWind = 0.2
-    windReductionFactor = 0.9
-    
-    asphaltRise = 70 * 0.9 * 0.9 = 56.7°F
-    concreteRise = 30 * 0.9 * 0.9 = 24.3°F
-    
-    asphaltTemp = 110 + 56.7 = 166.7°F
-    concreteTemp = 110 + 24.3 = 134.3°F
-    ```
-
-- **Result:** **DANGER** alert
-
-***
-
-
-Hudak, P. (2022). [Hazardous Ground Temperatures When Walking Dogs](https://journals.uco.es/index.php/pet/article/view/13733), *Pet Behaviour Science*, 12, 31–42.  
-    - Table 1: Asphalt 40–70 °F above air, concrete 10–30 °F above air.  
-    - Supported by: Vets Now, [Why dog owners should avoid pavements and fake grass on hot days](https://www.vets-now.com/2017/06/never-walk-dogs-hot-asphalt-tarmac-pavements-artificial-grass/).
-
-Yavuzturk, C. & Ksaibati, K. (2002). [Assessment of Temperature Fluctuations in Asphalt Pavements](https://www.ugpti.org/resources/reports/downloads/mpc02-136.pdf), Mountain-Plains Consortium, University of Wyoming, pp. 18–19.  
-    - Engineering modeling: wind convective cooling effect on pavement temperature.
-
-Vets Now. [Why dog owners should avoid pavements and fake grass on hot days](https://www.vets-now.com/2017/06/never-walk-dogs-hot-asphalt-tarmac-pavements-artificial-grass/).  
-    - Veterinary guidance: risk of paw pad injury at ≥120°F.
-
-Reuters. [How concrete, asphalt and urban heat islands add to the misery of heat waves](https://www.reuters.com/graphics/CLIMATE-CHANGE/URBAN-HEAT/byvrejywdpe/).  
-    - Asphalt surface temps up to 180 °F.
-
-ASPCA. [Cold Weather Safety Tips](https://www.aspca.org/pet-care/general-pet-care/cold-weather-safety-tips).  
-    - Guidance on pet safety in cold weather.
+- This is an estimate, not a direct infrared pavement measurement.
+- Real pavement can stay hotter later in the day because it stores heat.
+- Always use the 7-second hand test before walking your dog.
